@@ -1,0 +1,18 @@
+{
+  "name": "downloadytb",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "dev": "nodemon index.js",
+    "start": "node index.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Thiago Neves Luz",
+  "license": "ISC",
+  "dependencies": {
+    "fluent-ffmpeg": "^2.1.2",
+    "yargs": "^17.6.2",
+    "youtube-dl-exec": "^2.1.10"
+  }
+}
