@@ -1,17 +1,18 @@
 const ytdl = require('youtube-dl-exec');
 const ffmpeg = require('fluent-ffmpeg');
-const fs = require('fs').promises;
-const path = require('path');
+const { readFile, unlink } = require('fs').promises;
+const { parse, join } = require('path');
 const argv = require('./cliArgs');
 
 (async () => {
 	if (argv.fromFile) {
 		try {
-			const file = JSON.parse(await fs.readFile(argv.fromFile));
+			const file = JSON.parse(await readFile(argv.fromFile));
 
 			for (downl of file) {
 				// download with youtube-dl
 				let { destination, skip, duration } = downl;
+				const fullVideoPath = parse(destination);
 				const options = {
 					quiet: true,
 					addHeader: [
@@ -19,6 +20,10 @@ const argv = require('./cliArgs');
 						'user-agent:Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:108.0) Gecko/20100101 Firefox/108.0'
 					]
 				};
+				const videoPath = join(
+					fullVideoPath.dir,
+					fullVideoPath.name + `.${argv.audioFormat}`
+				);
 
 				if (argv.audioOnly) {
 					options.extractAudio = Boolean(argv.audioOnly);
@@ -32,25 +37,23 @@ const argv = require('./cliArgs');
 				}
 				const data = await ytdl(downl.url, options);
 
-				if (skip) {
+				if (duration != undefined) {
+					if (skip == undefined) {
+						skip = 0;
+					}
 					// cut audio with ffmpeg
-					const fullVideo = path.parse(destination);
-					const videoPath = path.join(
-						fullVideo.dir,
-						fullVideo.name + '.wav'
+					const targetPath = join(
+						fullVideoPath.dir,
+						fullVideoPath.name + '_trimmed' + `.${argv.audioFormat}`
 					);
-					const targetPath = path.join(
-						fullVideo.dir,
-						fullVideo.name + '_cutted' + '.wav'
-					);
-					console.log(videoPath);
-					const audio = ffmpeg(videoPath)
+					const audio = await ffmpeg(videoPath)
 						.seekInput(msToTime(skip))
 						.setDuration(msToTime(duration))
 						.output(targetPath)
-						.on('end', function (err) {
+						.on('end', async function (err) {
 							if (!err) {
 								console.log(`${targetPath} converted`);
+								await unlink(videoPath);
 							}
 						})
 						.on('error', (err) => console.log('error: ', err))
